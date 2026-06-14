@@ -13,6 +13,7 @@ public record CreateOperationRequest(
         @NotNull OperationType type,
         @Size(max = 300) String description,
         @NotNull Long categoryId,
+        Long incomeSourceId,
         Long groupId
 ) {
 }

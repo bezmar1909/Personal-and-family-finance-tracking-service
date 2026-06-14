@@ -14,6 +14,8 @@ public record OperationResponse(
         Long userId,
         Long categoryId,
         String categoryName,
+        Long incomeSourceId,
+        String incomeSourceName,
         Long groupId
 ) {
     public static OperationResponse from(FinanceOperation operation) {
@@ -26,6 +28,8 @@ public record OperationResponse(
                 operation.getUserId(),
                 operation.getCategory().getId(),
                 operation.getCategory().getName(),
+                operation.getIncomeSource() == null ? null : operation.getIncomeSource().getId(),
+                operation.getIncomeSource() == null ? null : operation.getIncomeSource().getName(),
                 operation.getGroup() == null ? null : operation.getGroup().getId()
         );
     }

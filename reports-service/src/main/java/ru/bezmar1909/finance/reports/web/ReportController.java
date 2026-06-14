@@ -35,6 +35,60 @@ public class ReportController {
         return reportService.summary(CurrentUser.id(authentication), from, to, groupId, userIds);
     }
 
+    @GetMapping("/month")
+    public ReportSummaryResponse month(
+            @RequestParam int year,
+            @RequestParam int month,
+            @RequestParam(required = false) Long groupId,
+            @RequestParam(required = false) List<Long> userIds,
+            Authentication authentication
+    ) {
+        return reportService.monthly(CurrentUser.id(authentication), year, month, groupId, userIds);
+    }
+
+    @GetMapping("/quarter")
+    public ReportSummaryResponse quarter(
+            @RequestParam int year,
+            @RequestParam int quarter,
+            @RequestParam(required = false) Long groupId,
+            @RequestParam(required = false) List<Long> userIds,
+            Authentication authentication
+    ) {
+        return reportService.quarterly(CurrentUser.id(authentication), year, quarter, groupId, userIds);
+    }
+
+    @GetMapping("/year")
+    public ReportSummaryResponse year(
+            @RequestParam int year,
+            @RequestParam(required = false) Long groupId,
+            @RequestParam(required = false) List<Long> userIds,
+            Authentication authentication
+    ) {
+        return reportService.yearly(CurrentUser.id(authentication), year, groupId, userIds);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ReportSummaryResponse user(
+            @org.springframework.web.bind.annotation.PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Long groupId,
+            Authentication authentication
+    ) {
+        return reportService.summary(CurrentUser.id(authentication), from, to, groupId, List.of(userId));
+    }
+
+    @GetMapping("/group/{groupId}/members")
+    public ReportSummaryResponse groupMembers(
+            @org.springframework.web.bind.annotation.PathVariable Long groupId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam List<Long> userIds,
+            Authentication authentication
+    ) {
+        return reportService.summary(CurrentUser.id(authentication), from, to, groupId, userIds);
+    }
+
     @GetMapping("/expense-analytics")
     public ExpenseAnalyticsResponse expenseAnalytics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,

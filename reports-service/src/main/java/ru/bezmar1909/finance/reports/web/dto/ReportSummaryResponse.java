@@ -13,6 +13,7 @@ public record ReportSummaryResponse(
         BigDecimal balance,
         int operationsCount,
         List<GroupedAmount> byCategory,
+        List<GroupedAmount> byIncomeSource,
         List<GroupedAmount> byUser
 ) {
     public record GroupedAmount(String key, BigDecimal income, BigDecimal expense, BigDecimal balance) {

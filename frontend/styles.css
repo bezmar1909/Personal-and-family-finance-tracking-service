@@ -283,6 +283,11 @@ select:focus {
   gap: 18px;
 }
 
+.stack {
+  display: grid;
+  gap: 18px;
+}
+
 .panel {
   min-width: 0;
   overflow: hidden;

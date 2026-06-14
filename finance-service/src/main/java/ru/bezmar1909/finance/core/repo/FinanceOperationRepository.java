@@ -7,12 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ru.bezmar1909.finance.core.domain.FinanceOperation;
 
 public interface FinanceOperationRepository extends JpaRepository<FinanceOperation, Long> {
-    @EntityGraph(attributePaths = {"category", "group"})
+    @EntityGraph(attributePaths = {"category", "incomeSource", "group"})
     List<FinanceOperation> findByUserIdAndGroupIsNullOrderByOperationDateDesc(Long userId);
 
-    @EntityGraph(attributePaths = {"category", "group"})
+    @EntityGraph(attributePaths = {"category", "incomeSource", "group"})
     List<FinanceOperation> findByGroupIdOrderByOperationDateDesc(Long groupId);
 
-    @EntityGraph(attributePaths = {"category", "group"})
+    @EntityGraph(attributePaths = {"category", "incomeSource", "group"})
     List<FinanceOperation> findByOperationDateBetween(LocalDate from, LocalDate to);
 }

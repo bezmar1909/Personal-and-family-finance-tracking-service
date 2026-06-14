@@ -42,6 +42,10 @@ public class FinanceOperation {
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "income_source_id")
+    private IncomeSource incomeSource;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
     private FamilyGroup group;
 
@@ -52,13 +56,14 @@ public class FinanceOperation {
     }
 
     public FinanceOperation(BigDecimal amount, LocalDate operationDate, OperationType type, String description,
-                            Long userId, Category category, FamilyGroup group) {
+                            Long userId, Category category, IncomeSource incomeSource, FamilyGroup group) {
         this.amount = amount;
         this.operationDate = operationDate;
         this.type = type;
         this.description = description;
         this.userId = userId;
         this.category = category;
+        this.incomeSource = incomeSource;
         this.group = group;
     }
 
@@ -88,6 +93,10 @@ public class FinanceOperation {
 
     public Category getCategory() {
         return category;
+    }
+
+    public IncomeSource getIncomeSource() {
+        return incomeSource;
     }
 
     public FamilyGroup getGroup() {

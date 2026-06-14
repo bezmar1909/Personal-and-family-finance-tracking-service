@@ -9,16 +9,17 @@ const state = {
   email: localStorage.getItem("financeEmail") || "",
   groups: [],
   categories: [],
+  incomeSources: [],
   operations: [],
   reportRange: defaultRange()
 };
 
 const titles = {
-  dashboard: ["Обзор финансов", "Доходы, расходы и семейный баланс"],
-  operations: ["Операции", "Доходы и расходы"],
-  groups: ["Группы", "Семейный и совместный учет"],
-  categories: ["Категории", "Классификация операций"],
-  reports: ["Отчеты", "Периоды, участники и аналитика"]
+  dashboard: ["Finance overview", "Income, expenses and family balance"],
+  operations: ["Operations", "Income and expenses"],
+  groups: ["Groups", "Family and shared accounting"],
+  categories: ["Categories", "Operation classification and income sources"],
+  reports: ["Reports", "Periods, members and analytics"]
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -42,18 +43,23 @@ function bindNavigation() {
   document.getElementById("operationFilterGroup").addEventListener("change", () => run(loadOperations));
 
   document.getElementById("operationGroup").addEventListener("change", (event) => {
-    syncCategoryScope(event.target.value);
-    run(loadCategories);
+    syncSharedScope(event.target.value);
+    run(loadClassifiers);
   });
 
   document.getElementById("categoryGroup").addEventListener("change", (event) => {
-    syncCategoryScope(event.target.value);
-    run(loadCategories);
+    syncSharedScope(event.target.value);
+    run(loadClassifiers);
+  });
+
+  document.getElementById("incomeSourceGroup").addEventListener("change", (event) => {
+    syncSharedScope(event.target.value);
+    run(loadClassifiers);
   });
 
   document.getElementById("categoryFilterGroup").addEventListener("change", (event) => {
-    syncCategoryScope(event.target.value);
-    run(loadCategories);
+    syncSharedScope(event.target.value);
+    run(loadClassifiers);
   });
 
   document.getElementById("reportGroup").addEventListener("change", (event) => {
@@ -90,14 +96,14 @@ function bindForms() {
     form.reset();
     await loadGroups();
     selectGroupEverywhere(group.id);
-    await Promise.all([loadCategories(), loadOperations(), renderReport(), refreshDashboard()]);
-    toast("Группа создана и выбрана");
+    await Promise.all([loadClassifiers(), loadOperations(), renderReport(), refreshDashboard()]);
+    toast("Group created and selected");
   });
 
   onSubmit("memberForm", async (form) => {
     const data = formData(form);
     if (!data.groupId) {
-      toast("Сначала создайте или выберите группу");
+      toast("Create or select a group first");
       return;
     }
     await request(`${API.finance}/api/groups/${data.groupId}/members`, {
@@ -106,7 +112,7 @@ function bindForms() {
     });
     form.reset();
     fillGroupSelects();
-    toast("Участник добавлен");
+    toast("Member added");
   });
 
   onSubmit("categoryForm", async (form) => {
@@ -115,26 +121,49 @@ function bindForms() {
       method: "POST",
       body: JSON.stringify(data)
     });
-    syncCategoryScope(category.groupId || "");
+    syncSharedScope(category.groupId || "");
     await loadCategories();
     document.getElementById("operationCategory").value = String(category.id);
-    toast("Категория создана и выбрана");
+    toast("Category created and selected");
+  });
+
+  onSubmit("incomeSourceForm", async (form) => {
+    const data = normalizeOptionalGroup(formData(form));
+    const source = await request(`${API.finance}/api/income-sources`, {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+    syncSharedScope(source.groupId || "");
+    await loadIncomeSources();
+    document.getElementById("operationIncomeSource").value = String(source.id);
+    toast("Income source created and selected");
   });
 
   onSubmit("operationForm", async (form) => {
     const data = normalizeOptionalGroup(formData(form));
     if (!data.categoryId) {
-      toast("Сначала создайте и выберите категорию");
+      toast("Create or select a category first");
       return;
     }
     data.amount = Number(data.amount);
     data.categoryId = Number(data.categoryId);
+
+    if (data.type === "INCOME") {
+      if (!data.incomeSourceId) {
+        toast("Select an income source for income operation");
+        return;
+      }
+      data.incomeSourceId = Number(data.incomeSourceId);
+    } else {
+      delete data.incomeSourceId;
+    }
+
     await request(`${API.finance}/api/operations`, {
       method: "POST",
       body: JSON.stringify(data)
     });
     document.getElementById("operationFilterGroup").value = data.groupId || "";
-    toast("Операция добавлена");
+    toast("Operation added");
     await Promise.all([loadOperations(), refreshDashboard(), renderReport()]);
   });
 
@@ -155,7 +184,7 @@ async function run(action) {
   try {
     await action();
   } catch (error) {
-    toast(error.message || "Ошибка запроса");
+    toast(error.message || "Request failed");
   }
 }
 
@@ -165,7 +194,7 @@ async function bootstrap() {
   if (state.groups.length > 0) {
     selectGroupEverywhere(state.groups[0].id);
   }
-  await Promise.all([loadCategories(), loadOperations(), refreshDashboard(), renderReport()]);
+  await Promise.all([loadClassifiers(), loadOperations(), refreshDashboard(), renderReport()]);
   document.getElementById("apiStatus").classList.add("ok");
   document.getElementById("apiStatus").textContent = "API online";
 }
@@ -176,12 +205,24 @@ async function loadGroups() {
   fillGroupSelects();
 }
 
+async function loadClassifiers() {
+  await Promise.all([loadCategories(), loadIncomeSources()]);
+}
+
 async function loadCategories() {
   const groupId = document.getElementById("categoryFilterGroup").value;
   const query = groupId ? `?groupId=${groupId}` : "";
   state.categories = await request(`${API.finance}/api/categories${query}`);
   renderCategories();
   fillCategorySelect();
+}
+
+async function loadIncomeSources() {
+  const groupId = document.getElementById("categoryFilterGroup").value;
+  const query = groupId ? `?groupId=${groupId}` : "";
+  state.incomeSources = await request(`${API.finance}/api/income-sources${query}`);
+  renderIncomeSources();
+  fillIncomeSourceSelect();
 }
 
 async function loadOperations() {
@@ -220,7 +261,7 @@ async function renderReport() {
 }
 
 function renderAuthState() {
-  document.getElementById("sessionEmail").textContent = state.email || "Гость";
+  document.getElementById("sessionEmail").textContent = state.email || "Guest";
   document.getElementById("authPanel").classList.toggle("is-hidden", Boolean(state.token));
   document.getElementById("workspace").classList.toggle("is-hidden", !state.token);
   document.getElementById("logoutButton").disabled = !state.token;
@@ -228,13 +269,13 @@ function renderAuthState() {
 
 function renderGroups() {
   const list = document.getElementById("groupsList");
-  list.innerHTML = state.groups.length ? "" : empty("Групп пока нет");
+  list.innerHTML = state.groups.length ? "" : empty("No groups yet");
   state.groups.forEach((group) => {
     list.insertAdjacentHTML("beforeend", `
       <div class="list-item">
         <div>
           <strong>${escapeHtml(group.name)}</strong>
-          <span>ID ${group.id} · владелец ${group.ownerUserId}</span>
+          <span>ID ${group.id} · owner ${group.ownerUserId}</span>
         </div>
       </div>
     `);
@@ -243,13 +284,13 @@ function renderGroups() {
 
 function renderCategories() {
   const list = document.getElementById("categoriesList");
-  list.innerHTML = state.categories.length ? "" : empty("Категорий пока нет");
+  list.innerHTML = state.categories.length ? "" : empty("No categories yet");
   state.categories.forEach((category) => {
     list.insertAdjacentHTML("beforeend", `
       <div class="list-item">
         <div>
           <strong>${escapeHtml(category.name)}</strong>
-          <span>${category.type} · ${category.groupId ? `группа ${category.groupId}` : "личная"}</span>
+          <span>${category.type} · ${category.groupId ? `group ${category.groupId}` : "personal"}</span>
         </div>
         <span class="badge ${category.type === "INCOME" ? "income" : "expense"}">${category.type}</span>
       </div>
@@ -257,15 +298,33 @@ function renderCategories() {
   });
 }
 
+function renderIncomeSources() {
+  const list = document.getElementById("incomeSourcesList");
+  list.innerHTML = state.incomeSources.length ? "" : empty("No income sources yet");
+  state.incomeSources.forEach((source) => {
+    list.insertAdjacentHTML("beforeend", `
+      <div class="list-item">
+        <div>
+          <strong>${escapeHtml(source.name)}</strong>
+          <span>${source.groupId ? `group ${source.groupId}` : "personal"}</span>
+        </div>
+      </div>
+    `);
+  });
+}
+
 function renderOperations() {
   const tbody = document.getElementById("operationsTable");
-  tbody.innerHTML = state.operations.length ? "" : `<tr><td colspan="5">Операций пока нет</td></tr>`;
+  tbody.innerHTML = state.operations.length ? "" : `<tr><td colspan="5">No operations yet</td></tr>`;
   state.operations.forEach((operation) => {
+    const category = operation.incomeSourceName
+      ? `${operation.categoryName} / ${operation.incomeSourceName}`
+      : operation.categoryName;
     tbody.insertAdjacentHTML("beforeend", `
       <tr>
         <td>${operation.operationDate}</td>
         <td><span class="badge ${operation.type === "INCOME" ? "income" : "expense"}">${operation.type}</span></td>
-        <td>${escapeHtml(operation.categoryName)}</td>
+        <td>${escapeHtml(category)}</td>
         <td>${escapeHtml(operation.description || "")}</td>
         <td class="num">${money(operation.amount)}</td>
       </tr>
@@ -282,7 +341,7 @@ function renderMetrics(summary) {
 
 function renderCategoryBars(elementId, shares) {
   const root = document.getElementById(elementId);
-  root.innerHTML = shares.length ? "" : empty("Нет расходов за период");
+  root.innerHTML = shares.length ? "" : empty("No expenses for this period");
   shares.forEach((row) => {
     root.insertAdjacentHTML("beforeend", `
       <div class="bar-row">
@@ -298,7 +357,7 @@ function renderCategoryBars(elementId, shares) {
 
 function renderMonthlyTrend(rows) {
   const root = document.getElementById("monthlyTrend");
-  root.innerHTML = rows.length ? "" : empty("Нет данных за период");
+  root.innerHTML = rows.length ? "" : empty("No data for this period");
   const max = Math.max(...rows.map((row) => Number(row.income) + Number(row.expense)), 1);
   rows.forEach((row) => {
     const incomeWidth = Math.max(2, Number(row.income) / max * 100);
@@ -317,12 +376,18 @@ function renderMonthlyTrend(rows) {
 }
 
 function renderSummaryOutput(summary) {
+  const sources = summary.byIncomeSource || [];
+  const sourceRows = sources.map((row) => `
+    <div class="summary-cell"><span>${escapeHtml(row.name)}</span><strong>${money(row.amount)}</strong></div>
+  `).join("");
+
   document.getElementById("summaryOutput").innerHTML = `
     <div class="summary-grid">
-      <div class="summary-cell"><span>Доходы</span><strong>${money(summary.totalIncome)}</strong></div>
-      <div class="summary-cell"><span>Расходы</span><strong>${money(summary.totalExpense)}</strong></div>
-      <div class="summary-cell"><span>Баланс</span><strong>${money(summary.balance)}</strong></div>
-      <div class="summary-cell"><span>Операции</span><strong>${summary.operationsCount}</strong></div>
+      <div class="summary-cell"><span>Income</span><strong>${money(summary.totalIncome)}</strong></div>
+      <div class="summary-cell"><span>Expense</span><strong>${money(summary.totalExpense)}</strong></div>
+      <div class="summary-cell"><span>Balance</span><strong>${money(summary.balance)}</strong></div>
+      <div class="summary-cell"><span>Operations</span><strong>${summary.operationsCount}</strong></div>
+      ${sourceRows}
     </div>
   `;
 }
@@ -333,6 +398,7 @@ function fillGroupSelects() {
     ["operationFilterGroup", true],
     ["memberGroup", false],
     ["categoryGroup", true],
+    ["incomeSourceGroup", true],
     ["categoryFilterGroup", true],
     ["reportGroup", true]
   ];
@@ -340,7 +406,7 @@ function fillGroupSelects() {
   targets.forEach(([id, withPersonal]) => {
     const select = document.getElementById(id);
     const selected = select.value;
-    select.innerHTML = withPersonal ? `<option value="">Личные данные</option>` : "";
+    select.innerHTML = withPersonal ? `<option value="">Personal data</option>` : "";
     state.groups.forEach((group) => {
       select.insertAdjacentHTML("beforeend", `<option value="${group.id}">${escapeHtml(group.name)}</option>`);
     });
@@ -352,22 +418,30 @@ function fillGroupSelects() {
 
 function fillCategorySelect() {
   const select = document.getElementById("operationCategory");
-  select.innerHTML = state.categories.length ? "" : `<option value="">Нет категорий для выбранной группы</option>`;
+  select.innerHTML = state.categories.length ? "" : `<option value="">No categories for selected group</option>`;
   state.categories.forEach((category) => {
     select.insertAdjacentHTML("beforeend", `<option value="${category.id}">${escapeHtml(category.name)} · ${category.type}</option>`);
   });
 }
 
-function syncCategoryScope(groupId) {
+function fillIncomeSourceSelect() {
+  const select = document.getElementById("operationIncomeSource");
+  select.innerHTML = state.incomeSources.length ? `<option value="">Not selected</option>` : `<option value="">No income sources for selected group</option>`;
+  state.incomeSources.forEach((source) => {
+    select.insertAdjacentHTML("beforeend", `<option value="${source.id}">${escapeHtml(source.name)}</option>`);
+  });
+}
+
+function syncSharedScope(groupId) {
   const value = groupId ? String(groupId) : "";
-  ["operationGroup", "categoryGroup", "categoryFilterGroup"].forEach((id) => {
+  ["operationGroup", "categoryGroup", "incomeSourceGroup", "categoryFilterGroup"].forEach((id) => {
     document.getElementById(id).value = value;
   });
 }
 
 function selectGroupEverywhere(groupId) {
   const value = groupId ? String(groupId) : "";
-  ["operationGroup", "operationFilterGroup", "memberGroup", "categoryGroup", "categoryFilterGroup", "reportGroup"].forEach((id) => {
+  ["operationGroup", "operationFilterGroup", "memberGroup", "categoryGroup", "incomeSourceGroup", "categoryFilterGroup", "reportGroup"].forEach((id) => {
     const select = document.getElementById(id);
     if ([...select.options].some((option) => option.value === value)) {
       select.value = value;
@@ -458,7 +532,8 @@ function saveSession(token, email) {
   state.email = email;
   localStorage.setItem("financeToken", token);
   localStorage.setItem("financeEmail", email);
-  toast("Вход выполнен");
+  toast("Signed in");
+  renderAuthState();
 }
 
 function logout() {

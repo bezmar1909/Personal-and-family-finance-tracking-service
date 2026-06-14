@@ -10,6 +10,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -42,14 +43,35 @@ public class FinanceClient {
         }
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Internal-Token", internalToken);
-        ResponseEntity<FinanceOperationDto[]> response = restTemplate.exchange(
-                uri.toUriString(),
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                new ParameterizedTypeReference<FinanceOperationDto[]>() {
-                }
-        );
+        ResponseEntity<FinanceOperationDto[]> response = exchangeWithRetry(uri.toUriString(), headers);
         FinanceOperationDto[] body = response.getBody();
         return body == null ? List.of() : Arrays.asList(body);
+    }
+
+    private ResponseEntity<FinanceOperationDto[]> exchangeWithRetry(String uri, HttpHeaders headers) {
+        RestClientException lastFailure = null;
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            try {
+                return restTemplate.exchange(
+                        uri,
+                        HttpMethod.GET,
+                        new HttpEntity<>(headers),
+                        new ParameterizedTypeReference<FinanceOperationDto[]>() {
+                        }
+                );
+            } catch (RestClientException ex) {
+                lastFailure = ex;
+                if (attempt == 3) {
+                    break;
+                }
+                try {
+                    Thread.sleep(100L * attempt);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw ex;
+                }
+            }
+        }
+        throw lastFailure;
     }
 }

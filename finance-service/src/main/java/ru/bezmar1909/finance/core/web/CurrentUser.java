@@ -10,4 +10,8 @@ public final class CurrentUser {
     public static Long id(Authentication authentication) {
         return ((AccessToken) authentication.getPrincipal()).userId();
     }
+
+    public static String role(Authentication authentication) {
+        return ((AccessToken) authentication.getPrincipal()).role();
+    }
 }

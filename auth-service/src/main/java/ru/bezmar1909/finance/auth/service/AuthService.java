@@ -24,11 +24,12 @@ public class AuthService {
         if (users.existsByEmailIgnoreCase(email)) {
             throw new IllegalArgumentException("User with this email already exists");
         }
+        Role role = users.count() == 0 ? Role.ADMIN : Role.USER;
         return users.save(new UserAccount(
                 email.toLowerCase(),
                 passwordEncoder.encode(password),
                 fullName,
-                Role.USER
+                role
         ));
     }
 

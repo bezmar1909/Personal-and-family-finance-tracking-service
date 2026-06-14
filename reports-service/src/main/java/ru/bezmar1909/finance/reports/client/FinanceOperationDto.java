@@ -12,6 +12,8 @@ public record FinanceOperationDto(
         Long userId,
         Long categoryId,
         String categoryName,
+        Long incomeSourceId,
+        String incomeSourceName,
         Long groupId
 ) {
 }

@@ -8,6 +8,8 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.bezmar1909.finance.core.domain.Category;
 import ru.bezmar1909.finance.core.domain.FamilyGroup;
 import ru.bezmar1909.finance.core.domain.FinanceOperation;
+import ru.bezmar1909.finance.core.domain.IncomeSource;
+import ru.bezmar1909.finance.core.domain.OperationType;
 import ru.bezmar1909.finance.core.repo.FinanceOperationRepository;
 import ru.bezmar1909.finance.core.web.dto.CreateOperationRequest;
 
@@ -16,11 +18,14 @@ public class OperationService {
     private final FinanceOperationRepository operations;
     private final GroupService groupService;
     private final CategoryService categoryService;
+    private final IncomeSourceService incomeSourceService;
 
-    public OperationService(FinanceOperationRepository operations, GroupService groupService, CategoryService categoryService) {
+    public OperationService(FinanceOperationRepository operations, GroupService groupService, CategoryService categoryService,
+                            IncomeSourceService incomeSourceService) {
         this.operations = operations;
         this.groupService = groupService;
         this.categoryService = categoryService;
+        this.incomeSourceService = incomeSourceService;
     }
 
     @Transactional
@@ -30,6 +35,15 @@ public class OperationService {
         if (category.getType() != request.type()) {
             throw new IllegalArgumentException("Operation type must match category type");
         }
+        IncomeSource source = null;
+        if (request.type() == OperationType.INCOME) {
+            if (request.incomeSourceId() == null) {
+                throw new IllegalArgumentException("Income source is required for income operations");
+            }
+            source = incomeSourceService.requireAccessible(request.incomeSourceId(), request.groupId(), userId);
+        } else if (request.incomeSourceId() != null) {
+            throw new IllegalArgumentException("Expense operations cannot have income source");
+        }
         String description = request.description() == null ? "" : request.description();
         return operations.save(new FinanceOperation(
                 request.amount(),
@@ -38,6 +52,7 @@ public class OperationService {
                 description,
                 userId,
                 category,
+                source,
                 group
         ));
     }

@@ -3,6 +3,7 @@ package ru.bezmar1909.finance.reports.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.Month;
 import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -41,8 +42,30 @@ public class ReportService {
                 income.subtract(expense),
                 operations.size(),
                 grouped(operations, FinanceOperationDto::categoryName),
+                grouped(operations.stream()
+                        .filter(operation -> "INCOME".equals(operation.type()))
+                        .toList(), operation -> operation.incomeSourceName() == null ? "Unknown" : operation.incomeSourceName()),
                 grouped(operations, operation -> String.valueOf(operation.userId()))
         );
+    }
+
+    public ReportSummaryResponse monthly(Long actorUserId, int year, int month, Long groupId, List<Long> userIds) {
+        YearMonth period = YearMonth.of(year, month);
+        return summary(actorUserId, period.atDay(1), period.atEndOfMonth(), groupId, userIds);
+    }
+
+    public ReportSummaryResponse quarterly(Long actorUserId, int year, int quarter, Long groupId, List<Long> userIds) {
+        if (quarter < 1 || quarter > 4) {
+            throw new IllegalArgumentException("Quarter must be between 1 and 4");
+        }
+        Month firstMonth = Month.of((quarter - 1) * 3 + 1);
+        LocalDate from = LocalDate.of(year, firstMonth, 1);
+        LocalDate to = from.plusMonths(3).minusDays(1);
+        return summary(actorUserId, from, to, groupId, userIds);
+    }
+
+    public ReportSummaryResponse yearly(Long actorUserId, int year, Long groupId, List<Long> userIds) {
+        return summary(actorUserId, LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31), groupId, userIds);
     }
 
     public ExpenseAnalyticsResponse expenseAnalytics(Long actorUserId, LocalDate from, LocalDate to, Long groupId, List<Long> userIds) {
@@ -72,6 +95,7 @@ public class ReportService {
                 .append(summary.operationsCount()).append("\n\n");
         builder.append("scope,key,income,expense,balance\n");
         summary.byCategory().forEach(row -> appendGroup(builder, "category", row));
+        summary.byIncomeSource().forEach(row -> appendGroup(builder, "incomeSource", row));
         summary.byUser().forEach(row -> appendGroup(builder, "user", row));
         return builder.toString();
     }

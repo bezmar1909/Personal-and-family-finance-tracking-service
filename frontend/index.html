@@ -127,6 +127,9 @@
               <label>Категория
                 <select name="categoryId" id="operationCategory" required></select>
               </label>
+              <label>Источник дохода
+                <select name="incomeSourceId" id="operationIncomeSource"></select>
+              </label>
               <label>Группа
                 <select name="groupId" id="operationGroup"></select>
               </label>
@@ -190,22 +193,35 @@
 
         <section class="view is-hidden" id="categoriesView">
           <div class="split-layout">
-            <form class="panel form-panel" id="categoryForm">
-              <h2>Новая категория</h2>
-              <label>Название
-                <input name="name" type="text" required value="Food">
-              </label>
-              <label>Тип
-                <select name="type">
-                  <option value="EXPENSE">Расход</option>
-                  <option value="INCOME">Доход</option>
-                </select>
-              </label>
-              <label>Группа
-                <select name="groupId" id="categoryGroup"></select>
-              </label>
-              <button type="submit">Создать</button>
-            </form>
+            <div class="stack">
+              <form class="panel form-panel" id="categoryForm">
+                <h2>Новая категория</h2>
+                <label>Название
+                  <input name="name" type="text" required value="Food">
+                </label>
+                <label>Тип
+                  <select name="type">
+                    <option value="EXPENSE">Расход</option>
+                    <option value="INCOME">Доход</option>
+                  </select>
+                </label>
+                <label>Группа
+                  <select name="groupId" id="categoryGroup"></select>
+                </label>
+                <button type="submit">Создать</button>
+              </form>
+
+              <form class="panel form-panel" id="incomeSourceForm">
+                <h2>Источник дохода</h2>
+                <label>Название
+                  <input name="name" type="text" required value="Salary">
+                </label>
+                <label>Группа
+                  <select name="groupId" id="incomeSourceGroup"></select>
+                </label>
+                <button type="submit">Создать</button>
+              </form>
+            </div>
 
             <section class="panel">
               <div class="panel-head">
@@ -213,6 +229,10 @@
                 <select id="categoryFilterGroup"></select>
               </div>
               <div class="list" id="categoriesList"></div>
+              <div class="panel-head">
+                <h2>Источники доходов</h2>
+              </div>
+              <div class="list" id="incomeSourcesList"></div>
             </section>
           </div>
         </section>

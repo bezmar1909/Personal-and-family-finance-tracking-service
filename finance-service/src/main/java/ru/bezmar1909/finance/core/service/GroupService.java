@@ -40,6 +40,18 @@ public class GroupService {
         }
     }
 
+    @Transactional
+    public void addMember(Long groupId, Long actorUserId, String actorRole, Long memberUserId) {
+        if (!"ADMIN".equals(actorRole)) {
+            addMember(groupId, actorUserId, memberUserId);
+            return;
+        }
+        if (!members.existsByGroupIdAndUserId(groupId, memberUserId)) {
+            FamilyGroup group = groups.findById(groupId).orElseThrow(() -> new IllegalArgumentException("Group not found"));
+            members.save(new GroupMember(group, memberUserId, MemberRole.MEMBER));
+        }
+    }
+
     @Transactional(readOnly = true)
     public List<FamilyGroup> list(Long userId) {
         return members.findGroupsByUserId(userId);
@@ -51,5 +63,12 @@ public class GroupService {
             throw new AccessDeniedException("No access to this group");
         }
         return groups.findById(groupId).orElseThrow(() -> new IllegalArgumentException("Group not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public MemberRole memberRole(Long groupId, Long userId) {
+        return members.findByGroupIdAndUserId(groupId, userId)
+                .map(GroupMember::getRole)
+                .orElse(null);
     }
 }
