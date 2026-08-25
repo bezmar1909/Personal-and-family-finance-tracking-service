@@ -1,0 +1,16 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: reports-service
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-to-a-long-shared-secret-for-local-dev}
+  internal-token: ${INTERNAL_TOKEN:local-internal-token}
+  finance-service-url: ${FINANCE_SERVICE_URL:http://localhost:8082}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
